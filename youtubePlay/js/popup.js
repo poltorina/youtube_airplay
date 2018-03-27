@@ -1,12 +1,12 @@
-const lolalStorFunc = function (param, keyValue, callback) {
-    chrome.storage.local[param](keyValue, function (result) {
+const lolalStorFunc = (param, keyValue, callback) => {
+    chrome.storage.local[param](keyValue, result => {
       param === 'set' ? console.log('Settings saved') : constLocalObj(result);
       if (callback) callback();
     });
   },
   localObj = {},
   docQ = (x) => document.querySelector(x),
-  constLocalObj = (result) => {
+  constLocalObj = result => {
     for (let i in result) localObj[i] = result[i];
   };
 
@@ -25,9 +25,9 @@ function saveOptions(e) {
 }
 
 function restoreOptions() {
-  lolalStorFunc('get', ['hostname', 'play-position'], () => {
+  lolalStorFunc('get', ['hostname', 'playPosition'], () => {
     docQ("#hostname").value = localObj.hostname || "apple-tv.local";
-    docQ("#play-position").checked = localObj.playPosition === '1';
+    docQ("#play-position").checked = (localObj.playPosition === '0');
   });
 }
 

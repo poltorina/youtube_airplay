@@ -16,7 +16,7 @@
         "js/script.js"
       ],
       "matches": [
-        "*://www.youtube.com/"
+        "*://www.youtube.com/*"
       ],
       "run_at": "document_end"
     }
@@ -33,8 +33,8 @@
     "activeTab",
     "background",
     "storage",
-    "*://www.youtube.com/",
-    "http://*.local:7000/",
+    "*://www.youtube.com/*",
+    "http://*.local:7000/*",
     "webRequest",
     "webRequestBlocking"
   ],
