@@ -25,7 +25,7 @@ function createBtn() {
     lolalStorFunc('set', {'isPlaying': true});
     sendToTV({
       action: 'play',
-      time: localObj.playPosition === '0' ? 0 : getCurrentTime()
+      num: localObj.playPosition === '0' ? 0 : getCurrentTime()
     });
   })
 }
@@ -53,7 +53,7 @@ if (docQ('.ytp-fullscreen-button.ytp-button')) {
 
             sendToTV(classL.contains('ytp-play-button') ? {
               action: play_pause.getAttribute('aria-label') === 'Play' ? 'pause' : 'play',
-              time: getCurrentTime()
+              num: getCurrentTime()
             } : {
               action: 'volume',
               num: volume.getAttribute('aria-valuenow')
