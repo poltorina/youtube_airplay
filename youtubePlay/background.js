@@ -13,17 +13,39 @@ const lolalStorFunc = function (param, keyValue, callback) {
 
 class Video {
   constructor(url, cmd) {
-    this.url = url;
+    const {hostname} = localObj;
+    this.url = `http://${hostname}${hostname.includes(':') ? '' : ':7000'}`;
     this.cmd = cmd;
   }
 
-  static sendRequest(action) {
+  static sendRequest({method = 'POST', url, headers = {}, data = null, callback}) {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url, true, 'AirPlay', null);
+
+    xhr.onload = callback;
+
+    for(let i in headers) xhr.setRequestHeader(i, headers[i]);
+
+    xhr.send(data);
   }
 
-  play() {
+  play(videoUrl, position) {
+    this.stop();
+    this.sendRequest({
+      url: `${this.url}/`,
+      headers: {
+        'Content-Type': 'text/parameters'
+      },
+      data: `Content-Location: ${videoUrl}\nStart-Position: ${position}\n`
+    });
 
   }
   stop() {
+    const callback = () => console.log('stop callback', this.response);
+    this.sendRequest({
+      callback,
+      url: `${this.url}/stop`
+    })
   }
 
 }
@@ -47,16 +69,16 @@ function getVideoUrl(url, cmd) {
       let sortUrl = (a, b) => a.itag === '22' ? 0 :  b.itag - a.itag;
 
       videoArray.forEach(el => {
-        let elJSON = queryToJson(decodeURIComponent(el));
-        elJSON.url = elJSON.url.replace(/^https/, "http");
-
+        let elJSON = queryToJson(el);
         if (elJSON.sig) elJSON.url += '&signature=' + elJSON.sig;
-        if (elJSON.url && elJSON.itag && elJSON.type.includes("video/mp4;")) urlData.push(elJSON);
+        if (elJSON.url && elJSON.itag && decodeURIComponent(elJSON.type).includes("video/mp4;")) urlData.push(elJSON);
       });
       urlData.sort(sortUrl);
 
-      console.log("Video format ", urlData[0], ", itag = ", urlData[0].itag);
-      return urlData[0];
+      console.log("Video format ", decodeURIComponent(urlData[0].type), ", itag = ", urlData[0].itag);
+      let yt = decodeURIComponent(urlData[0].url);
+      /requiressl=yes/.test(yt) ? yt = yt.replace(/^http:/, "https:") : yt = yt.replace(/^https:/, "http:");
+      return yt;
     }
     else console.log("Can't find video url");
   }
@@ -72,12 +94,13 @@ function getVideoUrl(url, cmd) {
     if (q.token && q.url_encoded_fmt_stream_map)
       videoUrl = getYoutubeUrl(q.url_encoded_fmt_stream_map);
     else console.log('no token');
-    if(videoUrl) videoAction(cmd)
+    if(videoUrl) videoAction(cmd, videoUrl)
   }
 }
 
-function videoAction(cmd) {
-  console.log(cmd)
+function videoAction(cmd, videoUrl = null) {
+  console.log(cmd, videoUrl);
+
 }
 
 chrome.extension.onMessage.addListener(request => {
