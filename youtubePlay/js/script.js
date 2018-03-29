@@ -13,6 +13,10 @@ const lolalStorFunc = (param, keyValue, callback) => {
 lolalStorFunc('set', {'isPlaying': false});
 
 const getCurrentTime = () => parseInt(docQ('.ytp-progress-bar').getAttribute('aria-valuenow'));
+const getCurrentPercent = () => {
+  const value = v => parseInt(docQ('.ytp-progress-bar').getAttribute(`aria-${v}`));
+  return (value('valuenow') * 100) / value('valuemax') / 100;
+};
 
 function createBtn() {
   console.log('create btn');
@@ -24,14 +28,18 @@ function createBtn() {
   btn.addEventListener('click', () => {
     lolalStorFunc('set', {'isPlaying': true});
     sendToTV({
-      action: 'play',
-      num: localObj.playPosition === '0' ? 0 : getCurrentTime()
+      action: 'start',
+      num: localObj.playPosition === '0' ? 0 : getCurrentPercent()
     });
   })
 }
 
 function sendToTV(cmd) {
-  chrome.extension.sendMessage({href: location.href, msg: 'action', cmd});
+  chrome.extension.sendMessage({
+    href: location.href,
+    msg: 'action',
+    cmd
+  });
 }
 
 if (docQ('.ytp-fullscreen-button.ytp-button')) {
@@ -40,6 +48,7 @@ if (docQ('.ytp-fullscreen-button.ytp-button')) {
 
   const play_pause = docQ('.ytp-play-button.ytp-button');
   const volume = docQ('.ytp-volume-panel');
+  const next = docQ('.ytp-upnext');
 
   const observer = new MutationObserver(mutations => {
     mutations.forEach(mutation => {
@@ -51,13 +60,34 @@ if (docQ('.ytp-fullscreen-button.ytp-button')) {
           if (localObj.isPlaying) {
             const classL = mutation.target.classList;
 
-            sendToTV(classL.contains('ytp-play-button') ? {
-              action: play_pause.getAttribute('aria-label') === 'Play' ? 'pause' : 'play',
-              num: getCurrentTime()
-            } : {
-              action: 'volume',
-              num: volume.getAttribute('aria-valuenow')
-            })
+            if (classL.contains('ytp-play-button')) {
+              sendToTV({
+                action: play_pause.getAttribute('aria-label') === 'Play' ? 'pause' : 'scrub',
+                num: getCurrentTime()
+              })
+            }
+            else if (classL.contains('ytp-upnext') && classL.contains('ytp-suggestion-set')) {
+              let click;
+              next.addEventListener('click', () => {
+                click = true;
+                sendToTV({
+                  action: 'start',
+                  num: localObj.playPosition === '0' ? 0 : getCurrentPercent()
+                })
+              });
+              setTimeout(function () {
+                if(!click) sendToTV({
+                  action: 'start',
+                  num: localObj.playPosition === '0' ? 0 : getCurrentPercent()
+                })
+              }, 10000)
+            }
+            else if (classL.contains('ytp-volume-panel')) {
+              sendToTV({
+                action: 'volume',
+                num: volume.getAttribute('aria-valuenow')
+              })
+            }
           }
         });
       }
@@ -65,7 +95,8 @@ if (docQ('.ytp-fullscreen-button.ytp-button')) {
   });
 
   observer.observe(play_pause, {attributes: true});
-  observer.observe(volume, {attributes: true, attributeFilter: ['aria-valuenow']});
+  // observer.observe(volume, {attributes: true, attributeFilter: ['aria-valuenow']});
+  observer.observe(next, {attributes: true, attributeFilter: ['class']});
 }
 
 chrome.storage.onChanged.addListener(() => lolalStorFunc('get', ['hostname', 'playPosition']));
