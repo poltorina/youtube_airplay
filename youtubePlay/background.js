@@ -21,15 +21,17 @@ class Video {
   }
 
   static sendRequest({method = 'POST', url, headers = {}, data = null, callback, f}) {
-    if(url.includes('playback-info')) {
+    if (url.includes('playback-info')) {
       const _this = this;
       this.canGet = false;
-      setTimeout(function () {_this.canGet = true}, 5000);
+      setTimeout(function () {
+        _this.canGet = true
+      }, 5000);
     }
-    if(!url.includes('playback-info') || this.canGet) {
+    if (!url.includes('playback-info') || this.canGet) {
       const xhr = new XMLHttpRequest();
       xhr.open(method, url, true, 'AirPlay', null);
-      xhr.onload = () => callback(xhr.responseXML);
+      if (callback) xhr.onload = () => callback(xhr.responseXML);
       xhr.onerror = () => this.onError(xhr.error, f);
       for (let i in headers) xhr.setRequestHeader(i, headers[i]);
       xhr.send(data);
@@ -39,26 +41,21 @@ class Video {
   playback(url) {
     const _this = this;
     clearInterval(this.timer);
-    let keysLength = 0, // 0 not playing; 2 ready to play; >2 playing
+    let keysLength = 0,
       pbStart, needStop;
     const callback = (resXML) => {
       keysLength = resXML.getElementsByTagName("key").length;
       console.log('pbStart: ', pbStart, ', keysLength: ', keysLength, ', needStop', needStop);
       if (!pbStart && keysLength > 2) { // video is playing
-        console.log('!pbStart && keysLength > 2');
         pbStart = true;
         needStop = false;
       }
       if (needStop || keysLength < 2) { // tv is ready too long or not ready
-        console.log('needStop && keysLength <= 2');
-        console.log(this.timer);
         clearInterval(_this.timer);
         _this.stop();
         pbStart = false;
       }
       if (pbStart && keysLength === 2) { // playback stopped, tv is ready
-        console.log('pbStart && keysLength === 2');
-        console.log(this.timer);
         clearInterval(_this.timer);
         _this.stop();
         pbStart = false;
@@ -68,7 +65,7 @@ class Video {
     };
 
     this.timer = setInterval(function () {
-      console.log('playback from: ', url);
+      console.log('playback from: ', url, new Date());
       Video.sendRequest({
         callback,
         method: 'GET',
@@ -81,17 +78,14 @@ class Video {
     const _this = this;
     console.log('play', videoUrl, position);
     console.log(videoUrl, position);
-    const callback = (e) => {
-      console.log('play callback', e);
-      _this.playback(videoUrl);
-    };
+    const callback = () => _this.playback(videoUrl);
     Video.sendRequest({
       callback,
       url: `${_this.url}/play`,
       headers: {
         'Content-Type': 'text/parameters'
       },
-      data: `Content-Location: ${videoUrl}\nStart-Position: ${position}\n`
+      data: `Content-Location: ${videoUrl}\nStart-Position: ${position ? position : '0'}\n`
     });
   }
 
@@ -100,17 +94,12 @@ class Video {
   }
 
   rate(value) {
-    const _this = this;
-    console.log('rate');
-    const callback = (e) => console.log('rate callback', e);
     Video.sendRequest({
-      callback,
-      url: `${_this.url}/rate?value=${value}`
+      url: `${this.url}/rate?value=${value}`
     });
   }
 
   scrub(sec) {
-    console.log('scrub');
     const callback = () => this.rate(1);
     Video.sendRequest({
       callback,
@@ -119,30 +108,26 @@ class Video {
   }
 
   stop() {
-    console.log(this.timer);
     clearInterval(this.timer);
-    console.log('stop');
-    const callback = (e) => console.log('stop callback', e);
     Video.sendRequest({
       f: 'stop',
-      callback,
       url: `${this.url}/stop`
     })
   }
 
   volume(value) {
-    const callback = (e) => console.log('volume callback', e);
     Video.sendRequest({
-      callback,
       url: `${this.url}/volume?value=${value}`
     });
   }
 
   onError(error, f) {
     console.log('New Error: ', error);
-    if(f !== 'stop') this.stop();
+    if (f !== 'stop') this.stop();
   }
 }
+
+let video;
 
 lolalStorFunc('get', ['hostname', 'playPosition']);
 chrome.storage.onChanged.addListener(() => lolalStorFunc('get', ['hostname', 'playPosition']));
@@ -154,8 +139,32 @@ function queryToJson(qs) {
   return params;
 }
 
-function getVideoUrl(id, cmd, ytObj) {
+function getVideoUrl(id, cmd) {
   let videoUrl;
+
+  const XK = {
+    wW: (a, b) => {
+      const c = a[0];
+      a[0] = a[b % a.length];
+      a[b % a.length] = c
+    },
+    qs: a => a.reverse(),
+    QC: (a, b) => a.splice(0, b)
+  };
+
+  function YK(a) {
+    a = a.split("");
+    XK.qs(a, 44);
+    XK.QC(a, 3);
+    XK.qs(a, 79);
+    XK.QC(a, 3);
+    XK.wW(a, 38);
+    XK.QC(a, 1);
+    XK.wW(a, 64);
+    XK.qs(a, 18);
+    XK.QC(a, 2);
+    return a.join("")
+  }
 
   function getYoutubeUrl(uefsm) {
     if (uefsm && uefsm.length > 1) {
@@ -166,6 +175,7 @@ function getVideoUrl(id, cmd, ytObj) {
       videoArray.forEach(el => {
         let elJSON = queryToJson(el);
         if (elJSON.sig) elJSON.url += '&signature=' + elJSON.sig;
+        else if (elJSON.s) elJSON.url += "&signature=" + YK(elJSON.s);
         if (elJSON.url && elJSON.itag && decodeURIComponent(elJSON.type).includes("video/mp4;")) urlData.push(elJSON);
       });
       urlData.sort(sortUrl);
@@ -195,7 +205,7 @@ function getVideoUrl(id, cmd, ytObj) {
 
 function videoAction(cmd, videoUrl = null) {
   console.log(cmd, videoUrl);
-  const video = new Video();
+  video = video ? video : new Video();
   switch (cmd.action) {
     case 'start':
       video.play({videoUrl, position: cmd.num});
@@ -218,8 +228,6 @@ chrome.extension.onMessage.addListener(request => {
   let {href, msg, cmd} = request;
   if (msg === 'action') {
     const ytID = href.split('v=')[1].split('&')[0];
-
-    console.log('localObj.yuID', localObj.yuID);
 
     console.log('Received: ', request);
 
