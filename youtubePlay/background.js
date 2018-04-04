@@ -6,7 +6,9 @@ const lolalStorFunc = function (param, keyValue, callback) {
       if (callback) callback();
     });
   },
-  localObj = {},
+  localObj = {
+    hostname: 'apple-tv.local'
+  },
   constLocalObj = (result) => {
     for (let i in result) localObj[i] = result[i];
   };
@@ -129,8 +131,8 @@ class Video {
 
 let video;
 
-lolalStorFunc('get', ['hostname', 'playPosition']);
-chrome.storage.onChanged.addListener(() => lolalStorFunc('get', ['hostname', 'playPosition']));
+lolalStorFunc('get', ['hostname']);
+chrome.storage.onChanged.addListener(() => lolalStorFunc('get', ['hostname']));
 
 function queryToJson(qs) {
   let params = {};
@@ -233,4 +235,11 @@ chrome.extension.onMessage.addListener(request => {
 
     cmd.action === 'start' ? getVideoUrl(ytID, cmd) : videoAction(cmd);
   }
+});
+
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo && changeInfo.status == "complete" &&
+    tab.url && tab.url.includes('://www.youtube.com/watch?')) chrome.tabs.sendMessage(tabId, {data: tab}, () => {
+  });
 });

@@ -6,7 +6,6 @@
   },
   "browser_action": {
     "default_icon": "icon.png",
-    "default_popup": "popup.html",
     "default_title": "youtube to airplay"
   },
   "content_scripts": [
@@ -34,6 +33,7 @@
     "activeTab",
     "background",
     "storage",
+    "tabs",
     "*://www.youtube.com/*",
     "http://*.local:7000/*",
     "webRequest",

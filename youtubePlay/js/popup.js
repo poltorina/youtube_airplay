@@ -14,7 +14,6 @@ function saveOptions(e) {
   e.preventDefault();
 
   lolalStorFunc('set', {'hostname': docQ("#hostname").value});
-  lolalStorFunc('set', {'playPosition': (docQ("#play-position").checked ? "0" : "1")});
 
   chrome.extension.getBackgroundPage().window.location.reload();
 
@@ -25,9 +24,8 @@ function saveOptions(e) {
 }
 
 function restoreOptions() {
-  lolalStorFunc('get', ['hostname', 'playPosition'], () => {
+  lolalStorFunc('get', ['hostname'], () => {
     docQ("#hostname").value = localObj.hostname || "apple-tv.local";
-    docQ("#play-position").checked = (localObj.playPosition === '0');
   });
 }
 
