@@ -13,6 +13,7 @@ const lolalStorFunc = function (param, keyValue, callback) {
     for (let i in result) localObj[i] = result[i];
   };
 
+let isPlaying = false;
 class Video {
   constructor() {
     this.url = () => `http://${localObj.hostname}${localObj.hostname.includes(':') ? '' : ':7000'}`;
@@ -30,6 +31,7 @@ class Video {
 
   sendToScript(data) {
     chrome.tabs.query({active: true, currentWindow: true}, tabs => {
+      console.log('tabs', tabs);
       chrome.tabs.sendMessage(tabs[0].id, data);
     });
   }
@@ -41,9 +43,10 @@ class Video {
       pbStart, needStop;
     const callback = resXML => {
       keysLength = resXML.getElementsByTagName("key").length;
-      console.log('pbStart: ', pbStart, ', keysLength: ', keysLength, ', needStop', needStop);
+      // console.log('pbStart: ', pbStart, ', keysLength: ', keysLength, ', needStop', needStop);
       if (!pbStart && keysLength > 2) { // video is playing
-        _this.sendToScript({msg: 'stateChange', state: true});
+        _this.sendToScript({msg: 'stateChange', state: 'play'});
+        isPlaying = true;
         pbStart = true;
         needStop = false;
       }
@@ -104,7 +107,8 @@ class Video {
 
   stop() {
     clearInterval(this.timer);
-    const callback = this.sendToScript({msg: 'stateChange', state: false});
+    isPlaying = false;
+    const callback = this.sendToScript({msg: 'stateChange', state: 'stop'});
     this.sendRequest({
       f: 'stop',
       url: `${this.url()}/stop`,
@@ -119,7 +123,7 @@ class Video {
   }
 
   onError(error, f) {
-    console.log('New Error: ', error);
+    console.error('New Error: ', error);
     if (f !== 'stop') this.stop();
   }
 }
@@ -201,7 +205,7 @@ function getVideoUrl(id, cmd) {
 }
 
 function videoAction(cmd, videoUrl = null) {
-  console.log(cmd, videoUrl);
+  // console.log(cmd, videoUrl);
   video = video ? video : new Video();
   switch (cmd.action) {
     case 'start':
@@ -211,10 +215,10 @@ function videoAction(cmd, videoUrl = null) {
       video.stop();
       break;
     case 'scrub':
-      video.scrub(cmd.num);
+      if(isPlaying) video.scrub(cmd.num);
       break;
     case 'pause':
-      video.pause();
+      if(isPlaying) video.pause();
       break;
     case 'volume':
       // video.volume();
@@ -229,7 +233,7 @@ chrome.extension.onMessage.addListener(request => {
   if (msg === 'action') {
     const ytID = href.split('v=')[1].split('&')[0];
 
-    console.log('Received: ', request);
+    // console.log('Received: ', request);
 
     cmd.action === 'start' ? getVideoUrl(ytID, cmd) : videoAction(cmd);
   }
@@ -237,6 +241,8 @@ chrome.extension.onMessage.addListener(request => {
 
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  console.log('tabId', tabId);
+
   if (changeInfo && changeInfo.status == "complete" &&
     tab.url && tab.url.includes('://www.youtube.com/watch?')) chrome.tabs.sendMessage(tabId, {msg: 'tabChangeUrl'}, () => {
   });
