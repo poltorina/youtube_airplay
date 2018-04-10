@@ -43,6 +43,10 @@ function changeState(stateBack) {
   let play = (stateBack === 'play' || stateBack === 'load');
   docQ('.html5-video-container').style.opacity = play ? 0 : 1;
   docQ('.yt-airplay-layer').style.opacity = play ? 1 : 0;
+
+  docQ('.ytp-button.yt-airplay-ext .icon-airplay-stop').style.display = play ? 'none' : 'block';
+  docQ('.ytp-button.yt-airplay-ext .icon-airplay-play').style.display = play ? 'block' : 'none';
+
   docQ(".video-stream.html5-main-video").muted = play;
   docQ(".ytp-mute-button.ytp-button").disabled = play;
   docQ(".ytp-mute-button.ytp-button").innerHTML = play ?
@@ -294,7 +298,16 @@ function init() {
     console.log('create btn');
     [...docQAll('.yt-airplay-ext')].forEach(el => el.remove());
     const btn = document.createElement('button');
-    btn.innerHTML = '<div class="ytp-tooltip ytp-bottom"><div class="ytp-tooltip-text-wrapper"><span class="ytp-tooltip-text">Play on Apple TV</span></div></div>';
+    btn.innerHTML = `
+    <svg class="icon-airplay-stop" height="100%" version="1.1" viewBox="0 0 36 36" width="100%">
+      <use class="ytp-svg-shadow"></use>
+      <path class="ytp-svg-fill" d="M12,28 L24,28 L18,22 L12,28 Z M27,9 L9,9 C7.9,9 7,9.9 7,11 L7,23 C7,24.1 7.9,25 9,25 L13,25 L13,23 L9,23 L9,11 L27,11 L27,23 L23,23 L23,25 L27,25 C28.1,25 29,24.1 29,23 L29,11 C29,9.9 28.1,9 27,9 L27,9 Z" id="ytp-id-29"></path>
+    </svg>
+    <svg class="icon-airplay-play" height="100%" version="1.1" viewBox="0 0 36 36" width="100%">
+      <use class="ytp-svg-shadow"></use>
+      <path d="M11,13 L25,13 L25,21 L11,21 L11,13 Z M12,28 L24,28 L18,22 L12,28 Z M27,9 L9,9 C7.9,9 7,9.9 7,11 L7,23 C7,24.1 7.9,25 9,25 L13,25 L13,23 L9,23 L9,11 L27,11 L27,23 L23,23 L23,25 L27,25 C28.1,25 29,24.1 29,23 L29,11 C29,9.9 28.1,9 27,9 L27,9 Z" fill="#fff" id="ytp-id-36"></path>
+    </svg>
+    <div class="ytp-tooltip ytp-bottom"><div class="ytp-tooltip-text-wrapper"><span class="ytp-tooltip-text">Play on Apple TV</span></div></div>`;
     btn.classList.add('ytp-button', 'yt-airplay-ext');
     const fullscreenBtn = docQ('.ytp-fullscreen-button.ytp-button');
     let styles = {
@@ -304,7 +317,12 @@ function init() {
           font-size: 11px;
           position: relative;
           overflow: visible;
-          background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAMAAADDpiTIAAAAnFBMVEUAAAD///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////+TINBkAAAAM3RSTlMAEe79CgP5xAbM9ubY8esfGTEVvYNSRg62KyOaj3xdPCfe06GJcGnhsVhMQTendmOslfMZnYj6AAAJNklEQVR42uzBAQ0AAAwCoHd6/27WcA44AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJj19Am7dZJaZRRFYXTjezGJpIIUkIJ0bNvxzn9uigTR6IFHIOHe/6w1hM3X2KkJoIPUBNBBagLoIDUBdJCaADpITQAdpCaADlITQAepCaCD1ATQQWoC6CA1AXSQmgA6SE0AHaQmgA5SE0AHqQmgg9QE0EFqAuggNQF0kJoAOkhNAB2kJoAOUhNAB6kJoIPUPjaAT2/webCZAML7mWR3ARxMAAgAASAABIAAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAAXQ3ye4COJgAEAACQAAIAAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEAAC6G6S3QVwMAEgAASAABAAAkAACAABIAAEgAAQAAJAAAgAASAABIAAEMC7u7rKWibZfSsBHF1fH2Upk+y+lQBuxrjJUibZfSMB3O3G2N1lJZPsvo0ALi/GTxeXWcgku28igJPj8cvxSdYxye6bCOBpvHjKOibZfQsB3O7Gi91tljHJ7hsI4OF8/Hb+kFVMsvv6AexPxx9O91nEJLuvH8Dj+MtjFjHJ7ssH8Dxeec4aJtl99QDuv49XvtxnCZPsvngA+7Pxj7M1bsAkuy8ewNfxH9+ygh/snYtS2lAURQ8EUEDl0VqwFZHyrvXV/f//1hk704cQc1KSsHd71ifsWa0x3nVDsru2ACvsZWUCkOwuLcCgg720BsYPye7KAoxmSGE2MnpIdlcW4Amp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');
+      }
+      .ytp-button.yt-airplay-ext .icon-airplay-stop {
+          display: block;
+      }
+      .ytp-button.yt-airplay-ext .icon-airplay-play {
+          display: none;
       }
       .ytp-button.yt-airplay-ext:hover .ytp-tooltip.ytp-bottom {
           display: block;
