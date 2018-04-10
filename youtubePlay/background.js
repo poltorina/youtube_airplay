@@ -14,10 +14,15 @@ const lolalStorFunc = function (param, keyValue, callback) {
   };
 
 let isPlaying = false;
+
 class Video {
   constructor() {
     this.url = () => `http://${localObj.hostname}${localObj.hostname.includes(':') ? '' : ':7000'}`;
     this.timer = false;
+    this.sendToScriptCount = 0;
+    this.keysLength = 0;
+    this.pbStart = false;
+    this.needStop = false;
   }
 
   sendRequest({method = 'POST', url, headers = {}, data = null, callback, f}) {
@@ -30,36 +35,44 @@ class Video {
   }
 
   sendToScript(data) {
-    chrome.tabs.query({active: true, currentWindow: true}, tabs => {
-      console.log('tabs', tabs);
-      chrome.tabs.sendMessage(tabs[0].id, data);
+    let _this = this;
+    chrome.tabs.query({active: true}, tabs => {
+      if (tabs[0] && tabs[0].id) {
+        _this.sendToScriptCount = 0;
+        chrome.tabs.sendMessage(tabs[0].id, data);
+      } else if (_this.sendToScriptCount < 3) {
+        _this.sendToScriptCount++;
+        _this.sendToScript(data);
+      } else {
+        _this.sendToScriptCount = 0;
+      }
     });
   }
 
   playback() {
     const _this = this;
     clearInterval(this.timer);
-    let keysLength = 0,
-      pbStart, needStop;
     const callback = resXML => {
-      keysLength = resXML.getElementsByTagName("key").length;
-      // console.log('pbStart: ', pbStart, ', keysLength: ', keysLength, ', needStop', needStop);
-      if (!pbStart && keysLength > 2) { // video is playing
+      _this.keysLength = resXML.getElementsByTagName("key").length;
+      console.log('_this.pbStart: ', _this.pbStart, ', _this.keysLength: ', _this.keysLength, ', _this.needStop', _this.needStop);
+      if (!_this.pbStart && _this.keysLength > 2) { // video is playing
         _this.sendToScript({msg: 'stateChange', state: 'play'});
         isPlaying = true;
-        pbStart = true;
-        needStop = false;
+        _this.pbStart = true;
+        _this.needStop = false;
       }
-      if (needStop || keysLength < 2) { // tv is ready too long or not ready
+      if (_this.needStop || _this.keysLength < 2) { // tv is ready too long or not ready
         clearInterval(_this.timer);
+        console.log('if (_this.needStop || _this.keysLength < 2) {');
         _this.stop();
-        pbStart = false;
+        _this.pbStart = false;
       }
-      if (pbStart && keysLength === 2) { // playback stopped, tv is ready
+      if (_this.pbStart && _this.keysLength === 2) { // playback stopped, tv is ready
         clearInterval(_this.timer);
+        console.log('if (_this.pbStart && _this.keysLength === 2) {');
         _this.stop();
-        pbStart = false;
-        needStop = true;
+        _this.pbStart = false;
+        _this.needStop = true;
       }
     };
 
@@ -75,7 +88,9 @@ class Video {
   play({videoUrl, position}) {
     const _this = this;
     console.log('play', videoUrl, position);
-    console.log(videoUrl, position);
+    this.keysLength = 0;
+    this.pbStart = false;
+    this.needStop = false;
     const callback = () => _this.playback();
     _this.sendRequest({
       callback,
@@ -215,10 +230,10 @@ function videoAction(cmd, videoUrl = null) {
       video.stop();
       break;
     case 'scrub':
-      if(isPlaying) video.scrub(cmd.num);
+      if (isPlaying) video.scrub(cmd.num);
       break;
     case 'pause':
-      if(isPlaying) video.pause();
+      if (isPlaying) video.pause();
       break;
     case 'volume':
       // video.volume();
@@ -232,8 +247,6 @@ chrome.extension.onMessage.addListener(request => {
   let {href, msg, cmd} = request;
   if (msg === 'action') {
     const ytID = href.split('v=')[1].split('&')[0];
-
-    // console.log('Received: ', request);
 
     cmd.action === 'start' ? getVideoUrl(ytID, cmd) : videoAction(cmd);
   }
